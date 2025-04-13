@@ -2,6 +2,7 @@
 Variables 
 A variable is a name used to store data in memory
 You can assign a value using the = operator 
+You can assign new values to a variable at any time.
 '''
 
 name = "Melody"
