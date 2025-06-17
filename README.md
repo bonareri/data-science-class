@@ -24,13 +24,3 @@ It is organized into folders based on different topics covered in class, startin
 6. **[Deep Learning](./06-Deep_Learning)**  
    Build neural networks using TensorFlow/PyTorch, including CNNs, Autoencoders, and LSTMs for Time Series.
 
-
-## How to Use
-
-- Clone the repo to your local machine
-- Navigate to each module folder for code examples and notes
-- Contribute by adding your code and pushing updates
-
-```bash
-git clone https://github.com/your-username/data-science-class.git
-```
