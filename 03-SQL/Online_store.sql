@@ -609,7 +609,34 @@ SELECT OrderID FROM Orders;
 
 SELECT ProductID, ProductName FROM Products ORDER BY ProductID;
 
+# Using Views
+# Total Spending per Customer (Window Function → View)
+# Using Window Function
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) 
+        OVER (PARTITION BY o.CustomerID) AS TotalCustomerSpending
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID;
+    
+# This works — but it’s not reusable yet.
 
+# Turn it into a view
+CREATE VIEW Customer_Spending_View AS
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) 
+        OVER (PARTITION BY o.CustomerID) AS TotalCustomerSpending
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID;
+    
+# Now you can query it like a table:
+SELECT * 
+FROM Customer_Spending_View;
 
 
 
