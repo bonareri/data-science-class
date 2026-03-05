@@ -638,6 +638,232 @@ JOIN OrderDetails od
 SELECT * 
 FROM Customer_Spending_View;
 
+# Rank Orders by Value Within Each Customer
+# For each customer, how do their orders rank by value?
+# Window Function Logic
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS OrderValue,
+    RANK() OVER (
+        PARTITION BY o.CustomerID
+        ORDER BY SUM(od.Quantity * od.UnitPrice) DESC
+    ) AS OrderRank
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+GROUP BY o.OrderID, o.CustomerID;
+
+# Save This as a View
+CREATE VIEW Customer_Order_Rankings AS
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS OrderValue,
+    RANK() OVER (
+        PARTITION BY o.CustomerID
+        ORDER BY SUM(od.Quantity * od.UnitPrice) DESC
+    ) AS OrderRank
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+GROUP BY o.OrderID, o.CustomerID;
+
+SELECT *
+FROM Customer_Order_Rankings;
+
+# Running Total of Sales Over Time
+# How does total **sales grow over time?
+# Window Function Logic
+SELECT
+    o.OrderDate,
+    SUM(od.Quantity * od.UnitPrice) AS DailySales,
+    SUM(SUM(od.Quantity * od.UnitPrice)) 
+        OVER (ORDER BY o.OrderDate) AS RunningTotalSales
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+GROUP BY o.OrderDate;
+
+# Views in SQL
+
+DROP view Sales_Running_Total;
+
+# UPDATE Orders SET OrderDate = '2026-01-01 10:15:00' WHERE OrderID = 1;
+UPDATE Orders SET OrderDate = '2026-01-02 14:20:00' WHERE OrderID = 2;
+UPDATE Orders SET OrderDate = '2026-01-03 09:30:00' WHERE OrderID = 3;
+UPDATE Orders SET OrderDate = '2026-01-05 16:45:00' WHERE OrderID = 4;
+UPDATE Orders SET OrderDate = '2026-02-01 11:00:00' WHERE OrderID = 5;
+UPDATE Orders SET OrderDate = '2026-02-15 18:10:00' WHERE OrderID = 6;
+
+ALTER TABLE Orders
+ADD Status VARCHAR(20) DEFAULT 'Pending';
+
+UPDATE Orders SET Status = 'Shipped' WHERE OrderID IN (1,2,4);
+UPDATE Orders SET Status = 'Cancelled' WHERE OrderID = 5;
+
+SELECT *
+FROM Orders
+WHERE Status = 'Cancelled';
+
+# Create a Sales Trend View
+CREATE VIEW Sales_Running_Total AS
+SELECT
+    DATE(o.OrderDate) AS OrderDay,
+    SUM(od.Quantity * od.UnitPrice) AS DailySales,
+    SUM(SUM(od.Quantity * od.UnitPrice)) 
+        OVER (ORDER BY DATE(o.OrderDate)) AS RunningTotalSales
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+WHERE o.Status <> 'Cancelled'
+GROUP BY DATE(o.OrderDate);
+
+SELECT *
+FROM Sales_Running_Total;
+
+# Triggeres
+# Create a Trigger to Update Stock After an Order
+DELIMITER //
+
+CREATE TRIGGER Reduce_Stock_After_Order
+AFTER INSERT ON OrderDetails
+FOR EACH ROW
+BEGIN
+    UPDATE Products
+    SET Stock = Stock - NEW.Quantity
+    WHERE ProductID = NEW.ProductID;
+END;
+//
+
+DELIMITER ;
+
+
+#  Test the Trigger
+-- Current stock for product 1 (Laptop)
+SELECT ProductName, Stock FROM Products WHERE ProductID = 1;
+
+-- Insert into orders
+INSERT INTO Orders (CustomerID, TotalAmount)
+VALUES 
+(3, 200.00),
+(4, 880.00);
+
+-- Insert a new order detail (Alice buys 2 Laptops)
+INSERT INTO OrderDetails (OrderDetailID, OrderID, ProductID, Quantity, UnitPrice)
+VALUES (12, 11, 4, 2, 200.00),
+		(13, 12, 2, 3, 880.00);
+        
+-- Check updated stock
+SELECT ProductName, Stock FROM Products WHERE ProductID = 2;
+
+SELECT * FROM OrderDetails;
+SELECT * FROM Customers;
+SELECT * FROM Products;
+SELECT * FROM Orders;
+
+# Create a Trigger to Log Deleted Orders
+CREATE TABLE DeletedOrdersLog (
+    LogID INT PRIMARY KEY AUTO_INCREMENT,
+    OrderID INT,
+    DeletedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CustomerID INT,
+    TotalAmount DECIMAL(10,2)
+);
+
+DELIMITER //
+
+CREATE TRIGGER Log_Deleted_Orders
+BEFORE DELETE ON Orders
+FOR EACH ROW
+BEGIN
+    INSERT INTO DeletedOrdersLog (OrderID, CustomerID, TotalAmount)
+    VALUES (OLD.OrderID, OLD.CustomerID, OLD.TotalAmount);
+END;
+//
+
+DELIMITER ;
+
+# Test the Delete Logging Trigger
+-- Delete an order
+DELETE FROM Orders WHERE OrderID = 3;
+
+-- Check the log
+SELECT * FROM DeletedOrdersLog;
+
+# Stored Procedures
+# Create a Stored Procedure to Add a New Customer
+
+# Instead of writing a long `INSERT` statement every time a new customer is added, 
+# we can create a stored procedure that takes customer details as input 
+# and adds them to the `Customers` table.
+
+DELIMITER $$
+
+CREATE PROCEDURE AddCustomer(
+	IN p_CustomerID INT,
+    IN p_FirstName VARCHAR(50),
+    IN p_LastName VARCHAR(50),
+    IN p_Email VARCHAR(100),
+    IN p_Phone VARCHAR(15)
+)
+BEGIN
+    INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone)
+    VALUES (p_CustomerID, p_FirstName, p_LastName, p_Email, p_Phone);
+END $$
+
+DELIMITER ;
+
+DROP Procedure AddCustomer;
+
+# Using the stored procedure
+CALL AddCustomer(12, 'Diana', 'Kamau', 'diana@example.com', '0745678901');
+
+SELECT * FROM Customers;
+
+# Create a Stored Procedure to Update Product Stock
+DELIMITER $$
+
+CREATE PROCEDURE UpdateStock(
+    IN p_ProductID INT,
+    IN p_AdditionalStock INT
+)
+BEGIN
+    UPDATE Products
+    SET Stock = Stock + p_AdditionalStock
+    WHERE ProductID = p_ProductID;
+END $$
+
+DELIMITER ;
+
+# Execute the Stock Update Procedure
+CALL UpdateStock(1, 5);
+
+SELECT * FROM Products;
+
+# Create a Stored Procedure to Calculate Total Spending per Customer
+DELIMITER $$
+
+CREATE PROCEDURE TotalSpending(
+    IN p_CustomerID INT
+)
+BEGIN
+    SELECT c.FirstName, c.LastName, SUM(o.TotalAmount) AS TotalSpent
+    FROM Customers c
+    JOIN Orders o ON c.CustomerID = o.CustomerID
+    WHERE c.CustomerID = p_CustomerID
+    GROUP BY c.FirstName, c.LastName;
+END $$
+
+DELIMITER ;
+
+# Execute the Procedure
+CALL TotalSpending(2);
+
+
+
+
+
 
 
 
