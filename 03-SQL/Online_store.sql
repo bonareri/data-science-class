@@ -13,19 +13,22 @@ CREATE TABLE Customers (
     RegistrationDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone)
+ALTER TABLE Customers
+MODIFY CustomerID INT NOT NULL AUTO_INCREMENT;
+
+INSERT INTO Customers (FirstName, LastName, Email, Phone)
 VALUES
-(1, 'John',   'Doe',     'john.doe@email.com',   '0711111111'),
-(2, 'Jane',   'Smith',   'jane.smith@email.com', '0722222222'),
-(3, 'Michael','Brown',   'michael.brown@email.com','0733333333'),
-(4, 'Emily',  'Davis',   'emily.davis@email.com','0744444444'),
-(5, 'Daniel', 'Wilson',  'daniel.wilson@email.com','0755555555'),
-(6, 'Sophia', 'Taylor',  'sophia.taylor@email.com','0766666666'),
-(7, 'James',  'Anderson','james.anderson@email.com','0777777777'),
-(8, 'Olivia', 'Thomas',  'olivia.thomas@email.com','0788888888'),
-(9, 'William','Moore',   'william.moore@email.com','0799999999'),
-(10,'Ava',  'Martin',  'ava.martin@email.com', '0700000000'),
-(11,'Melody', 'Bonareri',  'melodybonareri@gmail.com', '0727125056');
+('Brian',   'Otieno',    'brian.otieno@email.com',     '0712345678'),
+('Akinyi',  'Wanjiku',   'akinyi.wanjiku@email.com',   '0723456789'),
+('Kevin',   'Mwangi',    'kevin.mwangi@email.com',    '0734567890'),
+('Faith',   'Akinyi',    'faith.akinyi@email.com',    '0745678901'),
+('Dennis',  'Omondi',    'dennis.omondi@email.com',   '0756789012'),
+('Sharon',  'Chebet',    'sharon.chebet@email.com',   '0767890123'),
+('Peter',   'Kiptoo',    'peter.kiptoo@email.com',    '0778901234'),
+('Mercy',   'Njeri',     'mercy.njeri@email.com',     '0789012345'),
+('Samuel',  'Wekesa',    'samuel.wekesa@email.com',   '0790123456'),
+('Cynthia', 'Mutheu',    'cynthia.mutheu@email.com',  '0701234567'),
+('Melody',  'Bonareri',  'melodybonareri@gmail.com',  '0727125056');
 
 SELECT * FROM Customers;
 
@@ -48,14 +51,6 @@ DROP COLUMN Status;
 ALTER TABLE Customers
 RENAME COLUMN Phone TO PhoneNumber;
 
-## Change data type
-ALTER TABLE Customers
-MODIFY RegistrationDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
-
-## Add AUTO_INCREMENT to CustomerID
-ALTER TABLE Customers
-MODIFY CustomerID INT NOT NULL AUTO_INCREMENT;
-
 ## Drop UNIQUE constraint
 ALTER TABLE Customers
 DROP INDEX Email;
@@ -74,24 +69,24 @@ CREATE TABLE Products (
     ProductName VARCHAR(100) NOT NULL,
     Category VARCHAR(50),
     Price DECIMAL(10,2) CHECK (Price >= 0),
-    Stock INT CHECK (Stock >= 0)
+    Stock INT NOT NULL CHECK (Stock >= 0)
 );
 
 # Insert sample data
 
 INSERT INTO Products (ProductID, ProductName, Category, Price, Stock)
 VALUES
-(1, 'Laptop', 'Electronics', 1200.00, 10),
-(2, 'Smartphone', 'Electronics', 800.00, 25),
-(3, 'Headphones', 'Accessories', 150.00, 50),
-(4, 'Desk Chair', 'Furniture', 200.00, 15),
-(5, 'Notebook', 'Stationery', 3.50, 100),
-(6, 'Pen', 'Stationery', 1.20, 500),
-(7, 'Backpack', 'Accessories', 60.00, 40),
-(8, 'Monitor', 'Electronics', 300.00, 20),
-(9, 'Coffee Mug', 'Kitchen', 12.00, 75),
-(10, 'Table Lamp', 'Furniture', 45.00, 30),
-(11, 'Dish Washer', 'Kitchen', 100.00, 70);
+(1, 'Laptop',        'Electronics', 1189.99, 8),
+(2, 'Smartphone',    'Electronics', 799.50, 30),
+(3, 'Headphones',    'Accessories', 145.75, 45),
+(4, 'Desk Chair',    'Furniture',   215.20, 12),
+(5, 'Notebook',      'Stationery',  3.25,   120),
+(6, 'Pen',           'Stationery',  1.15,   600),
+(7, 'Backpack',      'Accessories', 62.40,  35),
+(8, 'Monitor',       'Electronics', 310.99, 18),
+(9, 'Coffee Mug',    'Kitchen',     11.80,  80),
+(10,'Table Lamp',    'Furniture',   47.25,  25),
+(11,'Dish Washer',   'Kitchen',     220.00, 15);
 
 # Update structure
 ALTER TABLE Products
@@ -110,51 +105,85 @@ SELECT * FROM Products;
 
 CREATE TABLE Orders (
     OrderID INT PRIMARY KEY AUTO_INCREMENT,
-    CustomerID INT,
+    CustomerID INT NOT NULL,
     OrderDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    TotalAmount DECIMAL(10,2) CHECK (TotalAmount >= 0),
-    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+    Status VARCHAR(20) DEFAULT 'Pending',
+
+    FOREIGN KEY (CustomerID)
+        REFERENCES Customers(CustomerID)
+        ON DELETE CASCADE
 );
 
-## Insert sample data
-INSERT INTO Orders (CustomerID, TotalAmount)
+INSERT INTO Orders (CustomerID, Status)
 VALUES
-(1, 1200.00),
-(2, 800.00),
-(3, 150.00),
-(1, 200.00),
-(5, 50.00),
-(6, 12.00),
-(7, 60.00),
-(8, 300.00),
-(9, 12.00),
-(10, 45.00);
+(1, 'Completed'),
+(2, 'Shipped'),
+(3, 'Completed'),
+(1, 'Completed'),
+(5, 'Pending'),
+(6, 'Cancelled'),
+(7, 'Shipped'),
+(8, 'Completed'),
+(9, 'Pending'),
+(10, 'Completed');
 
 SELECT * FROM Orders;
-
 CREATE TABLE OrderDetails (
     OrderDetailID INT PRIMARY KEY AUTO_INCREMENT,
-    OrderID INT,
-    ProductID INT,
-    Quantity INT CHECK (Quantity > 0),
-    UnitPrice DECIMAL(10,2) CHECK (UnitPrice >= 0),
-    FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
-    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+    OrderID INT NOT NULL,
+    ProductID INT NOT NULL,
+    Quantity INT NOT NULL CHECK (Quantity > 0),
+    UnitPrice DECIMAL(10,2) NOT NULL CHECK (UnitPrice >= 0),
+
+    FOREIGN KEY (OrderID)
+        REFERENCES Orders(OrderID)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (ProductID)
+        REFERENCES Products(ProductID)
+        ON DELETE CASCADE
 );
 
-# Insert sample data
 INSERT INTO OrderDetails (OrderID, ProductID, Quantity, UnitPrice)
 VALUES
-(1, 1, 1, 1200.00),
-(1, 3, 2, 150.00),
-(2, 2, 1, 800.00),
-(3, 5, 10, 3.50),
-(4, 4, 1, 200.00),
-(5, 6, 5, 1.20),
-(6, 7, 2, 60.00),
-(7, 8, 1, 300.00),
-(8, 9, 3, 12.00),
-(9, 10, 2, 45.00);
+-- Order 1 (high-value electronics + accessories)
+(1, 1, 1, 1189.99),
+(1, 7, 1, 62.40),
+(1, 3, 2, 145.75),
+
+-- Order 2 (electronics bundle - slight discount)
+(2, 2, 1, 780.00),
+(2, 8, 1, 295.00),
+
+-- Order 3 (bulk stationery - realistic office/student purchase)
+(3, 5, 20, 3.00),
+(3, 6, 50, 1.00),
+
+-- Order 4 (furniture combo)
+(4, 4, 1, 210.00),
+(4, 10, 1, 45.00),
+
+-- Order 5 (small household purchase)
+(5, 9, 4, 10.50),
+(5, 5, 6, 3.25),
+
+-- Order 6 (bulk pens - typical Kenyan office/school buying)
+(6, 6, 100, 1.00),
+
+-- Order 7 (accessories focused)
+(7, 7, 2, 60.00),
+(7, 3, 1, 145.75),
+
+-- Order 8 (premium electronics order)
+(8, 1, 1, 1150.00),
+(8, 8, 1, 300.00),
+
+-- Order 9 (very small budget order)
+(9, 9, 2, 11.80),
+
+-- Order 10 (mixed household + appliance)
+(10, 11, 1, 210.00),
+(10, 10, 1, 47.25);
 
 SELECT * FROM OrderDetails;
 
@@ -191,11 +220,6 @@ ORDER BY Price ASC;
 # Sorting Products by Price (Descending)
 SELECT * FROM Products
 ORDER BY Price DESC;
-
-# Sorting Orders by Multiple Columns
-# Sort orders first by `CustomerID` ascending, then by `TotalAmount` descending.
-SELECT * FROM Orders
-ORDER BY CustomerID ASC, TotalAmount DESC;
 
 # Limiting Rows
 # Show the top 2 most expensive products.
@@ -261,46 +285,6 @@ SET SQL_SAFE_UPDATES = 1;  -- re-enable after update
 DELETE FROM Products
 WHERE ProductID = 3;
 
-# Products.ProductID is a parent table in the relationship.
-# OrderDetails.ProductID is a child table referencing it.
-# MySQL prevents deletion of a parent row if child rows exist that reference it.
-
-SHOW CREATE TABLE OrderDetails;
-
-# How to add ON DELETE CASCADE
-# Step 1 — Drop the existing foreign keys
-ALTER TABLE orderdetails
-DROP FOREIGN KEY orderdetails_ibfk_1;
-
-ALTER TABLE orderdetails
-DROP FOREIGN KEY orderdetails_ibfk_2;
-
-# Step 2 — Recreate foreign keys with cascade
-ALTER TABLE orderdetails
-ADD CONSTRAINT orderdetails_ibfk_1
-FOREIGN KEY (OrderID)
-REFERENCES orders(OrderID)
-ON DELETE CASCADE;
-
-ALTER TABLE orderdetails
-ADD CONSTRAINT orderdetails_ibfk_2
-FOREIGN KEY (ProductID)
-REFERENCES products(ProductID)
-ON DELETE CASCADE;
-
-# Make OrderID and ProductID NOT NULL:
-ALTER TABLE orderdetails
-MODIFY OrderID INT NOT NULL,
-MODIFY ProductID INT NOT NULL;
-
-
-# Now: MySQL automatically deletes all related rows in OrderDetails.
-SELECT * FROM Products;
-SELECT * FROM OrderDetails;
-
-DELETE FROM Products
-WHERE ProductID = 3;
-
 # Deleting Multiple Rows
 DELETE FROM Products
 WHERE Category = 'Accessories';
@@ -339,44 +323,173 @@ FROM Products;
 # Let’s find all orders along with the customer who placed them.
 # We’ll combine `Orders` and `Customers`.
 
-SELECT o.OrderID,
-       o.OrderDate,
-       o.TotalAmount,
-       c.FirstName
-FROM Orders o
-INNER JOIN Customers c
-ON o.CustomerID = c.CustomerID;
-
-# Only Customers Who Have Placed Orders
-SELECT c.CustomerID,
-       c.FirstName,
-       c.LastName,
-       COUNT(o.OrderID) AS NumberOfOrders
+SELECT 
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    o.Status
 FROM Customers c
 INNER JOIN Orders o
-ON c.CustomerID = o.CustomerID
-GROUP BY c.CustomerID, c.FirstName, c.LastName
-ORDER BY NumberOfOrders DESC;
-
-# LEFT JOIN — Keep All from Left Table
-# all customers, even if they haven’t placed an order
-SELECT c.CustomerID,
-       c.FirstName,
-       o.OrderID,
-       o.TotalAmount
+    ON c.CustomerID = o.CustomerID;
+    
+# Orders + OrderDetails
+SELECT 
+    o.OrderID,
+    o.OrderDate,
+    od.ProductID,
+    od.Quantity,
+    od.UnitPrice
+FROM Orders o
+INNER JOIN OrderDetails od
+    ON o.OrderID = od.OrderID;
+    
+# Full sales view (Orders + Products)
+SELECT 
+    o.OrderID,
+    p.ProductName,
+    p.Category,
+    od.Quantity,
+    od.UnitPrice,
+    (od.Quantity * od.UnitPrice) AS SubTotal
+FROM OrderDetails od
+INNER JOIN Products p
+    ON od.ProductID = p.ProductID
+INNER JOIN Orders o
+    ON od.OrderID = o.OrderID;
+    
+# FULL CUSTOMER ORDER VIEW
+SELECT 
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate,
+    p.ProductName,
+    od.Quantity,
+    od.UnitPrice,
+    (od.Quantity * od.UnitPrice) AS TotalLine
+FROM Customers c
+INNER JOIN Orders o
+    ON c.CustomerID = o.CustomerID
+INNER JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+INNER JOIN Products p
+    ON od.ProductID = p.ProductID;
+    
+# LEFT JOIN
+# show ALL customers, even those with no orders
+SELECT 
+    c.CustomerID,
+    c.FirstName,
+    c.LastName,
+    o.OrderID,
+    o.OrderDate
 FROM Customers c
 LEFT JOIN Orders o
-ON c.CustomerID = o.CustomerID;
+    ON c.CustomerID = o.CustomerID;
+    
+# LEFT JOIN for products (unpopular products too)
+SELECT 
+    p.ProductID,
+    p.ProductName,
+    od.Quantity
+FROM Products p
+LEFT JOIN OrderDetails od
+    ON p.ProductID = od.ProductID;
+    
+# GROUP BY
+-- Total spending per customer
+SELECT 
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalSpent
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.CustomerID;
 
-# RIGHT JOIN — Keep All from Right Table
-# all orders appear, even if a customer is missing
-SELECT c.CustomerID,
-       c.FirstName,
-       o.OrderID,
-       o.TotalAmount
-FROM Customers c
-RIGHT JOIN Orders o
-ON c.CustomerID = o.CustomerID;
+# GROUP BY + ORDER BY (ranking customers)
+SELECT 
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalSpent
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.CustomerID
+ORDER BY TotalSpent DESC;
+
+# HAVING clause (filter AFTER grouping)
+-- WHERE filters rows
+-- HAVING filters groups
+
+-- Customers who spent more than 200
+SELECT 
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalSpent
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.CustomerID
+HAVING TotalSpent > 200;
+
+# Total quantity per product
+SELECT 
+    ProductID,
+    SUM(Quantity) AS TotalQuantitySold
+FROM OrderDetails
+GROUP BY ProductID;
+
+# HAVING example on products (best sellers only)
+SELECT 
+    ProductID,
+    SUM(Quantity) AS TotalSold
+FROM OrderDetails
+GROUP BY ProductID
+HAVING TotalSold >= 5;
+
+# Orders per customer
+SELECT 
+    CustomerID,
+    COUNT(OrderID) AS TotalOrders
+FROM Orders
+GROUP BY CustomerID;
+
+# Case When 
+# Classify order value (LOW / MEDIUM / HIGH)
+SELECT 
+    o.OrderID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalAmount,
+    CASE 
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 1000 THEN 'High Value'
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 300 THEN 'Medium Value'
+        ELSE 'Low Value'
+    END AS OrderCategory
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.OrderID;
+
+# Classify customers by spending
+SELECT 
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalSpent,
+    CASE 
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 1000 THEN 'VIP Customer'
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 200 THEN 'Regular Customer'
+        ELSE 'Low Spender'
+    END AS CustomerSegment
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.CustomerID;
+
+# Stock status (Products table)
+SELECT 
+    ProductName,
+    Stock,
+    CASE 
+        WHEN Stock = 0 THEN 'Out of Stock'
+        WHEN Stock < 10 THEN 'Low Stock'
+        WHEN Stock < 50 THEN 'Medium Stock'
+        ELSE 'Well Stocked'
+    END AS StockStatus
+FROM Products;
+
 
 # Using UNION for Full Outer Join
 SELECT c.CustomerID,
