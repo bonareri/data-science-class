@@ -932,10 +932,10 @@ DELIMITER ;
 SELECT ProductName, Stock FROM Products WHERE ProductID = 1;
 
 -- Insert into orders
-INSERT INTO Orders (CustomerID, TotalAmount)
-VALUES 
-(3, 200.00),
-(4, 880.00);
+-- INSERT INTO Orders (CustomerID, TotalAmount)
+-- VALUES 
+-- (3, 200.00),
+-- (4, 880.00);
 
 -- Insert a new order detail (Alice buys 2 Laptops)
 INSERT INTO OrderDetails (OrderDetailID, OrderID, ProductID, Quantity, UnitPrice)
@@ -954,9 +954,10 @@ SELECT * FROM Orders;
 CREATE TABLE DeletedOrdersLog (
     LogID INT PRIMARY KEY AUTO_INCREMENT,
     OrderID INT,
-    DeletedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CustomerID INT,
-    TotalAmount DECIMAL(10,2)
+    ProductID INT,
+    Quantity INT,
+    UnitPrice DECIMAL(10,2),
+    DeletedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 DELIMITER //
@@ -965,10 +966,15 @@ CREATE TRIGGER Log_Deleted_Orders
 BEFORE DELETE ON Orders
 FOR EACH ROW
 BEGIN
-    INSERT INTO DeletedOrdersLog (OrderID, CustomerID, TotalAmount)
-    VALUES (OLD.OrderID, OLD.CustomerID, OLD.TotalAmount);
-END;
-//
+    INSERT INTO DeletedOrdersLog (OrderID, ProductID, Quantity, UnitPrice)
+    SELECT 
+        od.OrderID,
+        od.ProductID,
+        od.Quantity,
+        od.UnitPrice
+    FROM OrderDetails od
+    WHERE od.OrderID = OLD.OrderID;
+END //
 
 DELIMITER ;
 
@@ -1030,20 +1036,28 @@ CALL UpdateStock(1, 5);
 SELECT * FROM Products;
 
 # Create a Stored Procedure to Calculate Total Spending per Customer
+
 DELIMITER $$
 
 CREATE PROCEDURE TotalSpending(
     IN p_CustomerID INT
 )
 BEGIN
-    SELECT c.FirstName, c.LastName, SUM(o.TotalAmount) AS TotalSpent
+    SELECT 
+        c.FirstName, 
+        c.LastName, 
+        SUM(od.Quantity * od.UnitPrice) AS TotalSpent
     FROM Customers c
-    JOIN Orders o ON c.CustomerID = o.CustomerID
+    JOIN Orders o 
+        ON c.CustomerID = o.CustomerID
+    JOIN OrderDetails od 
+        ON o.OrderID = od.OrderID
     WHERE c.CustomerID = p_CustomerID
     GROUP BY c.FirstName, c.LastName;
 END $$
 
 DELIMITER ;
+
 
 # Execute the Procedure
 CALL TotalSpending(2);
