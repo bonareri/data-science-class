@@ -1,6 +1,8 @@
-CREATE DATABASE test_onlinestore;
+DROP database onlinestore;
 
-USE test_onlinestore;
+CREATE DATABASE onlinestore;
+
+USE onlinestore;
 
 CREATE TABLE Customers (
     CustomerID INT PRIMARY KEY,
@@ -415,3 +417,457 @@ FROM Orders o
 JOIN OrderDetails od ON o.OrderID = od.OrderID
 GROUP BY o.CustomerID
 ORDER BY TotalSpent DESC;
+
+# HAVING clause (filter AFTER grouping)
+-- WHERE filters rows
+-- HAVING filters groups
+
+-- Customers who spent more than 200
+SELECT 
+    o.CustomerID,
+    c.FirstName,
+    SUM(od.Quantity * od.UnitPrice) AS TotalSpent
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+JOIN Customers c ON o.CustomerID = c.CustomerID
+GROUP BY o.CustomerID, c.FirstName
+HAVING SUM(od.Quantity * od.UnitPrice) > 200;
+
+# Total quantity per product
+SELECT 
+    ProductID,
+    SUM(Quantity) AS TotalQuantitySold
+FROM OrderDetails
+GROUP BY ProductID;
+
+# HAVING example on products (best sellers only)
+SELECT 
+	p.ProductName,
+    od.ProductID,
+    SUM(Quantity) AS TotalSold
+FROM Products p
+JOIN OrderDetails od
+ON p.productID = od.ProductID
+GROUP BY p.ProductID
+HAVING TotalSold >= 5;
+
+# Orders per customer
+SELECT 
+    CustomerID,
+    COUNT(OrderID) AS TotalOrders
+FROM Orders
+GROUP BY CustomerID;
+
+-- Add more orders 
+INSERT INTO Orders (CustomerID, Status)
+VALUES
+(1, 'Shipped'),
+(1, 'Completed'),
+(2, 'Completed'),
+(2, 'Shipped'),
+(3, 'Pending'),
+(3, 'Completed'),
+(5, 'Completed'),
+(5, 'Shipped'),
+(6, 'Completed'),
+(7, 'Completed');
+
+SELECT * FROM Orders;
+
+INSERT INTO OrderDetails (OrderID, ProductID, Quantity, UnitPrice)
+VALUES
+-- Order 11 (high-value customer)
+(11, 1, 1, 1200.00),
+(11, 7, 2, 60.00),
+
+-- Order 12 (mid-range electronics)
+(12, 2, 1, 790.00),
+(12, 3, 1, 150.00),
+
+-- Order 13 (stationery restock)
+(13, 5, 15, 3.00),
+(13, 6, 40, 1.00),
+
+-- Order 14 (home + furniture mix)
+(14, 4, 1, 215.00),
+(14, 10, 2, 46.00),
+
+-- Order 15 (low-budget order)
+(15, 9, 3, 11.00),
+
+-- Order 16 (bulk office supplies)
+(16, 6, 120, 1.00),
+
+-- Order 17 (accessories bundle)
+(17, 7, 3, 62.00),
+(17, 3, 1, 145.00),
+
+-- Order 18 (premium combo)
+(18, 1, 1, 1180.00),
+(18, 8, 1, 310.00),
+
+-- Order 19 (small mixed order)
+(19, 5, 5, 3.20),
+(19, 9, 2, 12.00),
+
+-- Order 20 (appliance + add-on)
+(20, 11, 1, 220.00),
+(20, 10, 1, 50.00);
+
+INSERT INTO Customers (FirstName, LastName, Email, Phone)
+VALUES
+('Esther',   'Otieno',    'esther.otieno@email.com',     '0712345678'),
+('Nancy',  'Mutheu',   'nancy.wanjiku@email.com',   '0723456789'),
+('Grace',   'Okoth',    'grace.mwangi@email.com',    '0734567890'),
+('Karen',   'Mwende',    'karen.akinyi@email.com',    '0745678901');
+
+SELECT * FROM Products;
+INSERT INTO Products (ProductID, ProductName, Category, Price, Stock)
+VALUES
+(12, 'Gaming Chair', 'Furniture', 250.00, 15),
+(13, 'External Hard Drive', 'Electronics', 95.00, 40),
+(14, 'Desk Organizer', 'Stationery', 8.50, 200);
+
+SELECT * FROM OrderDetails;
+
+# Case When 
+# Classify order value (LOW / MEDIUM / HIGH)
+SELECT 
+    o.OrderID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalAmount,
+    CASE 
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 1000 THEN 'High Value'
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 300 THEN 'Medium Value'
+        ELSE 'Low Value'
+    END AS OrderCategory
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.OrderID
+ORDER BY OrderCategory;
+
+# Classify customers by spending
+SELECT 
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS TotalSpent,
+    CASE 
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 1000 THEN 'VIP Customer'
+        WHEN SUM(od.Quantity * od.UnitPrice) >= 200 THEN 'Regular Customer'
+        ELSE 'Low Spender'
+    END AS CustomerSegment
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+GROUP BY o.CustomerID
+ORDER BY CustomerSegment DESC;
+
+# Stock status (Products table)
+SELECT 
+    ProductName,
+    Stock,
+    CASE 
+        WHEN Stock = 0 THEN 'Out of Stock'
+        WHEN Stock < 10 THEN 'Low Stock'
+        WHEN Stock < 50 THEN 'Medium Stock'
+        ELSE 'Well Stocked'
+    END AS StockStatus
+FROM Products
+ORDER BY StockStatus;
+
+
+# Combined Queries
+# UNION & UNION ALL
+-- Customers who have placed orders vs those who haven’t
+
+SELECT 
+    c.CustomerID,
+    c.FirstName,
+    'Has Orders' AS Status
+FROM Customers c
+JOIN Orders o
+    ON c.CustomerID = o.CustomerID
+
+UNION 
+
+SELECT 
+    c.CustomerID,
+    c.FirstName,
+    'No Orders' AS Status
+FROM Customers c
+WHERE c.CustomerID NOT IN (
+    SELECT CustomerID FROM Orders
+);
+    
+# Completed vs Pending Orders
+-- UNION combines filtered subsets
+-- Avoids duplicate rows automatically
+SELECT 
+    OrderID,
+    Status
+FROM Orders
+WHERE Status = 'Completed'
+
+UNION
+
+SELECT 
+    OrderID,
+    Status
+FROM Orders
+WHERE Status = 'Pending';
+
+
+# Using INTERSECT - Only common rows
+# Customers who have BOTH placed orders AND spent over 1000 
+SELECT CustomerID
+FROM Orders
+
+INTERSECT
+
+SELECT o.CustomerID
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+GROUP BY o.CustomerID
+HAVING SUM(od.Quantity * od.UnitPrice) > 1000;
+
+# Products that are Electronics AND actually sold
+SELECT p.ProductName
+FROM Products p
+WHERE p.Category = 'Electronics'
+
+INTERSECT
+
+SELECT p.ProductName
+FROM Products p
+JOIN OrderDetails od
+    ON p.ProductID = od.ProductID;
+    
+    
+# Except - Returns rows from the first query that do not exist in the second query.
+# Products that have NEVER been sold
+SELECT ProductName
+FROM Products
+
+EXCEPT
+
+SELECT p.ProductName
+FROM Products p
+JOIN OrderDetails od
+    ON p.ProductID = od.ProductID;
+    
+# Customers who have NOT placed any orders
+SELECT FirstName, LastName
+FROM Customers
+
+EXCEPT
+
+SELECT c.FirstName, c.LastName
+FROM Customers c
+JOIN Orders o
+    ON c.CustomerID = o.CustomerID;
+    
+# Using Subqueries in SQL
+# Identify Frequent Buyers
+SELECT FirstName, LastName
+FROM Customers
+WHERE CustomerID IN (
+    SELECT CustomerID
+    FROM Orders
+    GROUP BY CustomerID
+    HAVING COUNT(OrderID) > 2
+);
+
+# Nested query in FROM clause - Total spent per customer
+SELECT 
+	ct.CustomerID,
+    c.FirstName,
+    c.LastName,
+    ct.TotalSpent
+FROM (
+    SELECT 
+        o.CustomerID,
+        SUM(od.Quantity * od.UnitPrice) AS TotalSpent
+    FROM Orders o
+    JOIN OrderDetails od
+        ON o.OrderID = od.OrderID
+    GROUP BY o.CustomerID
+) AS ct
+JOIN Customers c
+    ON ct.CustomerID = c.CustomerID;
+    
+# Find Products That Haven’t Sold
+SELECT ProductName
+FROM Products
+WHERE ProductID NOT IN (
+    SELECT ProductID
+    FROM OrderDetails
+);
+
+# Products Sold in High-Value Orders
+SELECT 
+    p.ProductName,
+    pt.TotalSales
+FROM Products p
+JOIN (
+    SELECT 
+        ProductID,
+        SUM(Quantity * UnitPrice) AS TotalSales
+    FROM OrderDetails
+    GROUP BY ProductID
+) AS pt
+    ON p.ProductID = pt.ProductID
+WHERE pt.TotalSales > 1000;
+
+# Using CTEs
+# marketing team wants a list of customers who place more than one order
+-- Define the CTE
+WITH CustomerOrderCounts AS (
+    SELECT CustomerID, COUNT(OrderID) AS OrderCount
+    FROM Orders
+    GROUP BY CustomerID
+)
+-- Use the CTE in the main query
+SELECT c.FirstName, coc.OrderCount
+FROM Customers c
+JOIN CustomerOrderCounts coc
+ON c.CustomerID = coc.CustomerID
+WHERE coc.OrderCount > 2;
+
+# High-Value Orders
+# Finance team wants to focus on orders above average, 
+# but we want to calculate the average once and reuse it.
+WITH OrderTotals AS (
+    SELECT 
+        o.OrderID,
+        SUM(od.Quantity * od.UnitPrice) AS OrderTotal
+    FROM Orders o
+    JOIN OrderDetails od
+        ON o.OrderID = od.OrderID
+    GROUP BY o.OrderID
+),
+AvgOrder AS (
+    SELECT AVG(OrderTotal) AS AvgTotal
+    FROM OrderTotals
+)
+
+SELECT 
+    ot.OrderID,
+    ot.OrderTotal
+FROM OrderTotals ot
+CROSS JOIN AvgOrder ao
+WHERE ot.OrderTotal > ao.AvgTotal;
+
+# Top Products by Sales
+# sales team wants a list of products with total sales above $500
+WITH ProductSales AS (
+    SELECT ProductID, SUM(Quantity * UnitPrice) AS TotalSales
+    FROM OrderDetails
+    GROUP BY ProductID
+)
+SELECT p.ProductName, ps.TotalSales
+FROM Products p
+JOIN ProductSales ps
+ON p.ProductID = ps.ProductID
+WHERE ps.TotalSales > 500;
+
+# Window Functions
+# Calculate Total Spending per Customer Using SUM()
+SELECT 
+    o.CustomerID,
+    o.OrderID,
+    ot.OrderTotal,
+    SUM(ot.OrderTotal) OVER (PARTITION BY o.CustomerID) AS TotalSpent
+FROM Orders o
+JOIN (
+    SELECT 
+        OrderID,
+        SUM(Quantity * UnitPrice) AS OrderTotal
+    FROM OrderDetails
+    GROUP BY OrderID
+) ot
+    ON o.OrderID = ot.OrderID;
+    
+# Rank customers by spending
+SELECT 
+    CustomerID,
+    TotalSpent,
+    RANK() OVER (ORDER BY TotalSpent DESC) AS SpendingRank
+FROM (
+    SELECT 
+        o.CustomerID,
+        SUM(od.Quantity * od.UnitPrice) AS TotalSpent
+    FROM Orders o
+    JOIN OrderDetails od
+        ON o.OrderID = od.OrderID
+    GROUP BY o.CustomerID
+) AS CustomerTotals;
+
+# Find the Most Expensive Product in Each Order Using ROW_NUMBER()
+SELECT 
+    OrderID,
+    ProductID,
+    UnitPrice,
+    ROW_NUMBER() OVER(PARTITION BY OrderID ORDER BY UnitPrice DESC) AS RankByPrice
+FROM OrderDetails;
+
+# Using Views
+# Total Spending per Customer (Window Function → View)
+# Using Window Function
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) 
+        OVER (PARTITION BY o.CustomerID) AS TotalCustomerSpending
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID;
+    
+# This works — but it’s not reusable yet.
+
+# Turn it into a view
+CREATE VIEW Customer_Spending_View AS
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) 
+        OVER (PARTITION BY o.CustomerID) AS TotalCustomerSpending
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID;
+    
+# Now you can query it like a table:
+SELECT * 
+FROM Customer_Spending_View;
+
+# Rank Orders by Value Within Each Customer
+# For each customer, how do their orders rank by value?
+# Window Function Logic
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS OrderValue,
+    RANK() OVER (
+        PARTITION BY o.CustomerID
+        ORDER BY SUM(od.Quantity * od.UnitPrice) DESC
+    ) AS OrderRank
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+GROUP BY o.OrderID, o.CustomerID;
+
+# Save This as a View
+CREATE VIEW Customer_Order_Rankings AS
+SELECT
+    o.OrderID,
+    o.CustomerID,
+    SUM(od.Quantity * od.UnitPrice) AS OrderValue,
+    RANK() OVER (
+        PARTITION BY o.CustomerID
+        ORDER BY SUM(od.Quantity * od.UnitPrice) DESC
+    ) AS OrderRank
+FROM Orders o
+JOIN OrderDetails od
+    ON o.OrderID = od.OrderID
+GROUP BY o.OrderID, o.CustomerID;
+
+
+SELECT *
+FROM Customer_Order_Rankings;
